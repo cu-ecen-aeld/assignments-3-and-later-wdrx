@@ -27,7 +27,7 @@ jobs:
             run: ./unit-test.sh
     full-test:
         container:
-            image: cuaesd/aesd-autotest:24-assignment1
+            image: cuaesd/aesd-autotest:24-assignment2
             options: --platform linux/amd64
         runs-on: self-hosted
         steps:
