@@ -1,0 +1,3 @@
+Using built-in specs.
+COLLECT_GCC=aarch64-linux-gnu-gcc
+COLLECT_LTO_WRAPPER=/usr/lib/gcc/aarch64-linux-gnu/12/lto-wrapper
