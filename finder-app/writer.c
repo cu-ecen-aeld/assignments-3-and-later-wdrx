@@ -9,18 +9,23 @@ int main(int argc, char *argv[]) {
     
     openlog("writer", LOG_PID | LOG_CONS, LOG_USER);
 
-    FILE *file = fopen(argv[1], "w");
+    const char* writefile = argv[1];
+    const char* writestr = argv[2];
+    
+    FILE *file = fopen(writefile, "w");
     if (file == NULL) {
         syslog(LOG_ERR, "fopen: %m");
         return 1;
     }
 
-    int ret = fprintf(file, "%s\n", argv[2]);
+    int ret = fprintf(file, "%s\n", writestr);
     if (ret < 0) {
         syslog(LOG_ERR, "fprintf: %m");
         return 1;
     }
-
+    else {
+        syslog(LOG_DEBUG, "Writing %s to %s", writestr, writefile);
+    }
     
 
     if (fclose(file) != 0) {
