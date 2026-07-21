@@ -58,6 +58,8 @@ do
 	./writer "$WRITEDIR/${username}$i.txt" "$WRITESTR"
 done
 
+echo "Output from syslog: $(tail /var/log/syslog | grep AELD)"
+
 OUTPUTSTRING=$(./finder.sh "$WRITEDIR" "$WRITESTR")
 
 # remove temporary directories
