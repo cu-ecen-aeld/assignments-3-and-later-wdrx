@@ -25,22 +25,14 @@ jobs:
               git submodule update --init --recursive
           - name: Run unit test
             run: ./unit-test.sh
-    # full-test:
-    #     container:
-    #         image: cuaesd/aesd-autotest:24-assignment2
-    #         options: --platform linux/amd64
-    #     runs-on: self-hosted
-    #     steps:
-    #       - name: Self-check
-    #         run: |
-    #           echo "Running on $(uname -a)"
-    #           echo "Running on $(cat /etc/os-release)"
-    #           echo "Running on $(lsb_release -a)"
-    #       - name: Clone repository
-    #         run: |
-    #           find . -mindepth 1 -delete 2>/dev/null || true
-    #           git clone "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" .
-    #           git checkout "$GITHUB_SHA"
-    #           git submodule update --init --recursive
-    #       - name: Run full test
-    #         run: ./full-test.sh
+    full-test:
+        container:
+            image: cuaesd/aesd-autotest:24-assignment3
+            options: --platform linux/amd64
+        runs-on: self-hosted
+        steps:
+          - uses: actions/checkout@v2
+          - name: Checkout submodules
+            run : git submodule update --init --recursive
+          - name: Run full test
+            run: ./full-test.sh
