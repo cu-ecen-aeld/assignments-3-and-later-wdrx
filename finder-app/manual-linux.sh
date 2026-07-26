@@ -11,7 +11,7 @@ KERNEL_VERSION=v5.15.163
 BUSYBOX_VERSION=1_33_1
 FINDER_APP_DIR=$(realpath $(dirname $0))
 ARCH=arm64
-CROSS_COMPILE=aarch64-none-linux-gnu-
+CROSS_COMPILE=aarch64-linux-gnu-
 
 if [ $# -lt 1 ]
 then
@@ -34,10 +34,14 @@ if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
     echo "Checking out version ${KERNEL_VERSION}"
     git checkout ${KERNEL_VERSION}
 
-    # TODO: Add your kernel build steps here
+    make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE defconfig
+    make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE all
+    make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE modules
+    make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE dtbs
 fi
 
 echo "Adding the Image in outdir"
+cp ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ${OUTDIR}
 
 echo "Creating the staging directory for the root filesystem"
 cd "$OUTDIR"
@@ -47,34 +51,84 @@ then
     sudo rm  -rf ${OUTDIR}/rootfs
 fi
 
-# TODO: Create necessary base directories
+# Create necessary base directories
+echo "Creating the root filesystem itself"
+mkdir ${OUTDIR}/rootfs && cd ${OUTDIR}/rootfs
+mkdir -p bin dev etc home lib lib64 proc sbin sys tmp usr var
+mkdir -p usr/bin usr/lib usr/sbin
+mkdir -p var/log
+
+echo "Back to ${OUTDIR}"
+echo "Now creating BusyBox"
 
 cd "$OUTDIR"
 if [ ! -d "${OUTDIR}/busybox" ]
 then
-git clone git://busybox.net/busybox.git
+    echo "Cloning BusyBox"
+    git clone git://busybox.net/busybox.git
     cd busybox
     git checkout ${BUSYBOX_VERSION}
-    # TODO:  Configure busybox
+    echo "Checked out BusyBox version ${BUSYBOX_VERSION}"
+    echo "Cleaning and configuring BusyBox"
+    make distclean
+    make defconfig
 else
+    echo "Busybox directory exists. Skipping clone and checkout. Delete it if you want to re-clone and checkout."
     cd busybox
 fi
 
-# TODO: Make and install busybox
+# Make busybox
+if [ -f "${OUTDIR}/busybox/busybox" ]
+then
+    echo "BusyBox already built. Skipping build. Make clean in ${OUTDIR}/busybox if you want to re-build."
+else
+    echo "Building BusyBox"
+    make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE
+fi
+
+# Install BusyBox
+echo "Installing BusyBox"
+make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE CONFIG_PREFIX=${OUTDIR}/rootfs install
 
 echo "Library dependencies"
-${CROSS_COMPILE}readelf -a bin/busybox | grep "program interpreter"
-${CROSS_COMPILE}readelf -a bin/busybox | grep "Shared library"
+${CROSS_COMPILE}readelf -a ${OUTDIR}/rootfs/bin/busybox | grep "program interpreter"
+${CROSS_COMPILE}readelf -a ${OUTDIR}/rootfs/bin/busybox | grep "Shared library"
 
-# TODO: Add library dependencies to rootfs
+# Add library dependencies to rootfs
+# /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1    
+# /usr/lib/aarch64-linux-gnu/libm.so.6
+# /usr/lib/aarch64-linux-gnu/libresolv.so.2
+# /usr/lib/aarch64-linux-gnu/libc.so.6
+SYSROOT=$(${CROSS_COMPILE}gcc -print-sysroot)
+cp -v /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so* ${OUTDIR}/rootfs/lib
+cp -v /usr/lib/aarch64-linux-gnu/libc.so* ${OUTDIR}/rootfs/lib
+cp -v /usr/lib/aarch64-linux-gnu/libm.so* ${OUTDIR}/rootfs/lib
+cp -v /usr/lib/aarch64-linux-gnu/libresolv.so* ${OUTDIR}/rootfs/lib
 
-# TODO: Make device nodes
+# Make device nodes
+sudo mknod -m 666 ${OUTDIR}/rootfs/dev/null c 1 3
+sudo mknod -m 600 ${OUTDIR}/rootfs/dev/console c 5 1
 
-# TODO: Clean and build the writer utility
+# Clean and build the writer utility
+echo "Back to $FINDER_APP_DIR to build the writer utility"
+cd "$FINDER_APP_DIR"
+make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE clean
+make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE
 
-# TODO: Copy the finder related scripts and executables to the /home directory
+# Copy the finder related scripts and executables to the /home directory
 # on the target rootfs
+echo "Copying scripts and executables to ${OUTDIR}/rootfs/home"
+cp -v writer "${OUTDIR}/rootfs/home/"
+cp -v finder.sh "${OUTDIR}/rootfs/home/"
+cp -v finder-test.sh "${OUTDIR}/rootfs/home/"
+cp -v autorun-qemu.sh "${OUTDIR}/rootfs/home/"
+mkdir -p "${OUTDIR}/rootfs/home/conf"
+cp -v conf/* "${OUTDIR}/rootfs/home/conf/"
 
-# TODO: Chown the root directory
+# Chown the root directory
+sudo chown -R root:root "${OUTDIR}/rootfs"
 
-# TODO: Create initramfs.cpio.gz
+# Create initramfs.cpio.gz
+echo "Creating initramfs.cpio.gz"
+cd "$OUTDIR/rootfs"
+find . -print0 | cpio --null -ov --format=newc | gzip -9 > "$OUTDIR/initramfs.cpio.gz"
