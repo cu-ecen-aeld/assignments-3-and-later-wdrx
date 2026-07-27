@@ -31,6 +31,8 @@ jobs:
             options: --platform linux/amd64
         runs-on: self-hosted
         steps:
+          - name: Install aarch64 cross compiler
+            run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
           - name: Clone repository
             run: |
               find . -mindepth 1 -delete 2>/dev/null || true
