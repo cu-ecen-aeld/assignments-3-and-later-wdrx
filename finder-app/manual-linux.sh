@@ -34,10 +34,10 @@ if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
     echo "Checking out version ${KERNEL_VERSION}"
     git checkout ${KERNEL_VERSION}
 
-    make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE defconfig
-    make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE all
-    make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE modules
-    make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE dtbs
+    make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE -j$(nproc) defconfig
+    make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE -j$(nproc) all
+    make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE -j$(nproc) modules
+    make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE -j$(nproc) dtbs
 fi
 
 echo "Adding the Image in outdir"
