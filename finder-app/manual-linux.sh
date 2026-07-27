@@ -123,7 +123,7 @@ cp -v finder.sh "${OUTDIR}/rootfs/home/"
 cp -v finder-test.sh "${OUTDIR}/rootfs/home/"
 cp -v autorun-qemu.sh "${OUTDIR}/rootfs/home/"
 mkdir -p "${OUTDIR}/rootfs/home/conf"
-cp -v conf/* "${OUTDIR}/rootfs/home/conf/"
+cp -v ../conf/* "${OUTDIR}/rootfs/home/conf/"
 
 # Chown the root directory
 sudo chown -R root:root "${OUTDIR}/rootfs"
