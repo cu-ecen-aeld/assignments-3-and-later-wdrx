@@ -11,7 +11,16 @@ KERNEL_VERSION=v5.15.163
 BUSYBOX_VERSION=1_33_1
 FINDER_APP_DIR=$(realpath $(dirname $0))
 ARCH=arm64
-CROSS_COMPILE=aarch64-linux-gnu-
+
+if [ $(which aarch64-linux-gnu-gcc) ]; then
+    CROSS_COMPILE=aarch64-linux-gnu-
+elif [ $(which aarch64-none-linux-gnu-gcc) ]; then
+    CROSS_COMPILE=aarch64-none-linux-gnu-
+else
+    echo "No cross compiler found. Please install aarch64-linux-gnu-gcc or aarch64-none-linux-gnu-gcc."
+    exit 1
+fi
+
 
 if [ $# -lt 1 ]
 then
@@ -34,6 +43,7 @@ if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
     echo "Checking out version ${KERNEL_VERSION}"
     git checkout ${KERNEL_VERSION}
 
+    echo "Configuring kernel build"
     make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE -j$(nproc) defconfig
     make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE -j$(nproc) all
     make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE -j$(nproc) modules
@@ -100,10 +110,11 @@ ${CROSS_COMPILE}readelf -a ${OUTDIR}/rootfs/bin/busybox | grep "Shared library"
 # /usr/lib/aarch64-linux-gnu/libresolv.so.2
 # /usr/lib/aarch64-linux-gnu/libc.so.6
 SYSROOT=$(${CROSS_COMPILE}gcc -print-sysroot)
-cp -v /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so* ${OUTDIR}/rootfs/lib
-cp -v /usr/lib/aarch64-linux-gnu/libc.so* ${OUTDIR}/rootfs/lib
-cp -v /usr/lib/aarch64-linux-gnu/libm.so* ${OUTDIR}/rootfs/lib
-cp -v /usr/lib/aarch64-linux-gnu/libresolv.so* ${OUTDIR}/rootfs/lib
+
+find $SYSROOT -name ld-linux-aarch64.so.1 -exec cp {} ${OUTDIR}/rootfs/lib \;
+find $SYSROOT -name libc.so.6 -exec cp {} ${OUTDIR}/rootfs/lib \;
+find $SYSROOT -name libm.so.6 -exec cp {} ${OUTDIR}/rootfs/lib \;
+find $SYSROOT -name libresolv.so.2 -exec cp {} ${OUTDIR}/rootfs/lib \;
 
 # Make device nodes
 sudo mknod -m 666 ${OUTDIR}/rootfs/dev/null c 1 3
