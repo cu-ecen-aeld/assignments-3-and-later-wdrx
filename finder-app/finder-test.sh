@@ -25,8 +25,10 @@ else
 	WRITEDIR=/tmp/aeld-data/$3
 fi
 
-MATCHSTR="The number of files are ${NUMFILES} and the number of matching lines are ${NUMFILES}"
+cd $(dirname $0)
 
+MATCHSTR="The number of files are ${NUMFILES} and the number of matching lines are ${NUMFILES}"
+RESULTFILE=/tmp/assignment4-result.txt
 echo "Writing ${NUMFILES} files containing string ${WRITESTR} to ${WRITEDIR}"
 
 rm -rf "${WRITEDIR}"
@@ -61,6 +63,7 @@ done
 # echo "Output from syslog: $(tail /var/log/syslog | grep AELD)"
 
 OUTPUTSTRING=$(./finder.sh "$WRITEDIR" "$WRITESTR")
+echo $OUTPUTSTRING > $RESULTFILE
 
 # remove temporary directories
 rm -rf /tmp/aeld-data
