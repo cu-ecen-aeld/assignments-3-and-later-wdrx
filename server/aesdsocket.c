@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/select.h>
@@ -321,20 +322,70 @@ static void serve_client(int client_fd, const char *client_ip, int data_fd,
     syslog(LOG_INFO, "Closed connection from %s", client_ip);
 }
 
-int main(void)
+/**
+ * Detaches from the terminal. The parent exits on success, so only the child returns.
+ * Returns 0 in the child, -1 on error.
+ */
+static int daemonize(void)
+{
+    pid_t pid = fork();
+    if (pid < 0) {
+        log_errno("fork");
+        return -1;
+    }
+    if (pid > 0) {
+        _exit(0);
+    }
+    if (setsid() < 0) {
+        log_errno("setsid");
+        return -1;
+    }
+    if (chdir("/") < 0) {
+        log_errno("chdir");
+        return -1;
+    }
+    int null_fd = open("/dev/null", O_RDWR);
+    if (null_fd < 0) {
+        log_errno("open /dev/null");
+        return -1;
+    }
+    if (dup2(null_fd, STDIN_FILENO) < 0 || dup2(null_fd, STDOUT_FILENO) < 0 ||
+        dup2(null_fd, STDERR_FILENO) < 0) {
+        log_errno("dup2");
+        close(null_fd);
+        return -1;
+    }
+    if (null_fd > STDERR_FILENO) {
+        close(null_fd);
+    }
+    return 0;
+}
+
+int main(int argc, char *argv[])
 {
     int result = -1;
     int server_fd = -1;
     int data_fd = -1;
+    int run_as_daemon = 0;
     sigset_t original_mask;
 
     openlog("aesdsocket", LOG_PID, LOG_USER);
+
+    if (argc > 2 || (argc == 2 && strcmp(argv[1], "-d") != 0)) {
+        fprintf(stderr, "Usage: %s [-d]\n", argv[0]);
+        goto cleanup;
+    }
+    run_as_daemon = (argc == 2);
 
     if (setup_signals(&original_mask) < 0) {
         goto cleanup;
     }
     server_fd = create_listen_socket(SERVER_PORT);
     if (server_fd < 0) {
+        goto cleanup;
+    }
+    // Fork only after bind succeeded; the data file is opened by the child alone
+    if (run_as_daemon && daemonize() < 0) {
         goto cleanup;
     }
     data_fd = open_data_file();
