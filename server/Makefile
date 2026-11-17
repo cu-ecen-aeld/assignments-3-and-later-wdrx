@@ -1,11 +1,16 @@
 CC := gcc
+TARGET := aesdsocket
+OBJS := main.o server.o packet_reader.o file_helper.o
 
-all: aesdsocket
+all: $(TARGET)
 
-default: aesdsocket
+default: $(TARGET)
 
-aesdsocket: aesdsocket.c
-	$(CROSS_COMPILE)$(CC) $(CFLAGS) -o aesdsocket aesdsocket.c
+$(TARGET): $(OBJS)
+	$(CROSS_COMPILE)$(CC) $(CFLAGS) $(LDFLAGS) -o $(TARGET) $(OBJS)
+
+%.o: %.c $(wildcard *.h)
+	$(CROSS_COMPILE)$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f aesdsocket *.o
+	rm -f $(TARGET) *.o
